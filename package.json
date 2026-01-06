@@ -1,0 +1,25 @@
+{
+  "name": "dubmaster",
+  "version": "1.0.0",
+  "description": "I’ll write a clean, professional npm package description that fits your project and looks good to recruiters. This is written assuming the package represents the core backend / processing logic of your AI video dubbing system. You can tweak the name slightly if needed.",
+  "homepage": "https://github.com/SHAHZIL14/DubMaster#readme",
+  "bugs": {
+    "url": "https://github.com/SHAHZIL14/DubMaster/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SHAHZIL14/DubMaster.git"
+  },
+  "license": "ISC",
+  "author": "Mohd Shazil Raza",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  }
+}
