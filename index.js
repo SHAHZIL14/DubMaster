@@ -1,15 +1,38 @@
-import express from "express";
+import express, { urlencoded } from "express";
 import config from "./configuration/config.js";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import router from "./source/routes/user.routes.js";
+import { connect } from "./source/database/db.connect.js";
+// Modules
+
 const app = express();
 
+app.use(express.json({ limit: "16kb" }));
+app.use(urlencoded({ extended: "true", limit: "16kb" }));
+app.use(cors({ credentials: "true" }));
+app.use(cookieParser());
+// Middlewares
+
+app.use("/api/v1/user", router);
+// User routes
+
 app.get("/", function (request, respond) {
-  respond.send("The Dubmaster root endpoint");
+  respond.send("This is the root endpoint");
 });
+// ROOT!
 
-app.get("/auth", function (request, respond) {
-  respond.send("This is the auth endpoint");
-});
+// Routes
 
-app.listen(config.port, function () {
-  console.log("The app has started listening on port : 8000");
-});
+connect()
+  .then(function () {
+    app.listen(config.port, function () {
+      console.log("The app has started listening on port : 8000");
+    });
+  })
+  .catch(function (error) {
+    console.log(
+      "Server failed to listen as database failed to connect with error: ",
+      error
+    );
+  });

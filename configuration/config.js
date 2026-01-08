@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const enVariables = ["PORT"];
+const enVariables = ["PORT", "URI"];
 
 enVariables.forEach((enVariable) => {
   if (!process.env[enVariable]) {
@@ -11,6 +11,7 @@ enVariables.forEach((enVariable) => {
 
 const config = {
   port: parseInt(process.env.PORT, 10),
+  uri: process.env.URI,
 };
 
 export default config;
