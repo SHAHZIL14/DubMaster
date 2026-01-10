@@ -1,9 +1,9 @@
 import express, { urlencoded } from "express";
-import config from "./configuration/config.js";
+import config from "./Configuration/config.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import router from "./source/routes/user.routes.js";
-import { connect } from "./source/database/db.connect.js";
+import router from "./Sources/Routes/user.routes.js";
+import { connect } from "./Sources/Database/db.connect.js";
 // Modules
 
 const app = express();

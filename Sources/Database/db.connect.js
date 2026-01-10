@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import config from "../../configuration/config.js";
+import config from "../../Configuration/config.js";
 
 
-export const connect = async () => {
+export const connect = async function(){
   try {
     await mongoose.connect(config.uri, {
       dbName: "Dubmaster_shazil_2003",
