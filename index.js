@@ -12,16 +12,19 @@ app.use(express.json({ limit: "16kb" }));
 app.use(urlencoded({ extended: "true", limit: "16kb" }));
 app.use(cors({ credentials: "true" }));
 app.use(cookieParser());
+app.set("trust proxy", 1);
 // Middlewares
 
 app.use("/api/v1/user", router);
-// User routes
-
+// User routes\
 app.get("/", function (request, respond) {
   respond.send("This is the root endpoint");
 });
 // ROOT!
 
+app.get("/ip-test", (request, response) => {
+  response.json({ ip: request.ip });
+});
 // Routes
 
 connect()
