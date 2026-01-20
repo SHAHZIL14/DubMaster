@@ -8,9 +8,12 @@ const enVariables = [
   "REFRESHTOKENSECRET",
   "ACCESSTOKENEXPIRY",
   "REFRESHTOKENEXPIRY",
+  "CLOUDINARYSECRET",
+  "CLOUDINARYAPIKEY",
+  "CLOUDINARYCLOUDNAME"
 ];
 
-enVariables.forEach(function(enVariable){
+enVariables.forEach(function (enVariable) {
   if (!process.env[enVariable]) {
     throw new Error(`Error at configuration , ${enVariable} is not configured`);
   }
@@ -23,6 +26,9 @@ const config = {
   accessTokenExpiry: process.env.ACCESSTOKENEXPIRY,
   refreshTokenSecret: process.env.REFRESHTOKENSECRET,
   refreshTokenExpiry: process.env.REFRESHTOKENEXPIRY,
+  cloudinarySecret: process.env.CLOUDINARYSECRET,
+  cloudinaryApiKey: process.env.CLOUDINARYAPIKEY,
+  cloudinaryCloudName: process.env.CLOUDINARYCLOUDNAME,
 };
 
 export default config;

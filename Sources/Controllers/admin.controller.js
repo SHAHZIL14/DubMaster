@@ -2,6 +2,7 @@ import { apiError } from "../Utilities/apiError.utility.js";
 import { apiResponse } from "../Utilities/apiResponse.utility.js";
 import { User } from "../Models/user.model.js";
 import { asyncHandler } from "../Utilities/asyncHandler.utility.js";
+import mongoose from "mongoose";
 
 const getAdmin = asyncHandler(async function (request, response) {
   const user = request.user;
@@ -37,34 +38,33 @@ const getPendingUsers = asyncHandler(async function (request, response) {
     );
 });
 
-const approveUser = asyncHandler(async function (request, response) {
-  const { id } = request.params;
-  if (id.toString().trim().length <= 0)
-    throw new apiError(
-      401,
-      "Missing param , 'id' is required for user to approve"
-    );
-  const user = await User.findOne({ _id: id }).select(
-    "_id name email isApproved"
-  );
-  if (!user) throw new apiError(401, `User with _id:${id} does not exist`);
-  if (user.isApproved) {
-    response
-      .status(200)
-      .json(new apiResponse(200, null, "User with given id is already approved"));
-  } else {
-    user.isApproved = true;
-    await user.save({ validateBeforeSave: true });
-    response
-      .status(200)
-      .json(
-        new apiResponse(
-          200,
-          { user },
-          `User with _id:${id} has been approved successfully`
-        )
-      );
+const approveUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    throw new apiError(400, "Missing param: 'id' is required");
   }
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new apiError(400, "Invalid user id format");
+  }
+
+  const user = await User.findById(id).select("_id name email isApproved");
+  if (!user) {
+    throw new apiError(404, `User with id ${id} does not exist`);
+  }
+
+  if (user.isApproved) {
+    return res.status(200).json(
+      new apiResponse(200, { user }, "User already approved")
+    );
+  }
+
+  user.isApproved = true;
+  await user.save();
+
+  return res.status(200).json(
+    new apiResponse(200, { user }, "User approved successfully")
+  );
 });
+
 
 export { getAdmin, getPendingUsers, approveUser };

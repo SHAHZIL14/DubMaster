@@ -2,7 +2,9 @@ import express, { urlencoded } from "express";
 import config from "./Configuration/config.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import router from "./Sources/Routes/user.routes.js";
+import userRouter from "./Sources/Routes/user.routes.js";
+import adminRouter from "./Sources/Routes/admin.routes.js";
+import videoRouter from "./Sources/Routes/video.routes.js";
 import { connect } from "./Sources/Database/db.connect.js";
 // Modules
 
@@ -15,8 +17,11 @@ app.use(cookieParser());
 app.set("trust proxy", 1);
 // Middlewares
 
-app.use("/api/v1/user", router);
+app.use("/api/v1/user", userRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/video/", videoRouter);
 // User routes\
+
 app.get("/", function (request, respond) {
   respond.send("This is the root endpoint");
 });
@@ -26,6 +31,18 @@ app.get("/ip-test", (request, response) => {
   response.json({ ip: request.ip });
 });
 // Routes
+
+// This MUST have 4 arguments (err, req, res, next)
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  console.error(`[Error] ${statusCode} - ${message}`);
+  res.status(statusCode).json({
+    success: false,
+    message: message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
+});
 
 connect()
   .then(function () {
