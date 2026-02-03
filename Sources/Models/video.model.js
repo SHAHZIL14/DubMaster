@@ -14,7 +14,7 @@ const videoSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    
+
     originalVideoUrl: {
       type: String,
       required: true,
@@ -49,11 +49,11 @@ const videoSchema = new mongoose.Schema(
       index: true,
     },
 
-    captions: {
+    originalCaptions: {
       type: String,
     },
 
-    translatedText: {
+    translatedCaptions: {
       type: String,
     },
 

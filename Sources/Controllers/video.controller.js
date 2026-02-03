@@ -1,17 +1,18 @@
 import fs from "fs";
 import mongoose from "mongoose";
-import { parseSync, stringifySync } from "subtitle"
 import { apiError } from "../Utilities/apiError.utility.js";
 import { apiResponse } from "../Utilities/apiResponse.utility.js";
 import { asyncHandler } from "../Utilities/asyncHandler.utility.js";
-import { downloadFromCloudinary, extractAudio, generateCaptions, getVideoDuration, translateText } from "../Utilities/video.utility.js";
+import { extractAudio } from "../Services/audio.service.js";
+import { generateCaptions } from "../Services/captions.service.js";
+import { createJob } from "./jobs.controller.js";
 import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../Utilities/cloudinary.utility.js";
 import { safeUnlink } from "../Utilities/helper.utility.js";
 import { Video } from "../Models/video.model.js";
-import path from "path";
+import { getVideoDuration } from "../Services/duration.service.js";
 
 const uploadVideo = asyncHandler(async function (request, response) {
   const file = request.file;
@@ -52,11 +53,15 @@ const uploadVideo = asyncHandler(async function (request, response) {
     expiresAt: expiryDate,
   });
 
+  const job = await createJob(video._id, video.originalVideoUrl);
+  if (!job) throw new apiError(500, "Unable to create new job");
+
+
   response.status(201).json(
     new apiResponse(
       201,
       { id: video._id, url: video.originalVideoUrl },
-      "Video uploaded successfully"
+      `Video uploaded successfully and job created with ID:${job}`
     )
   );
 });
@@ -121,37 +126,41 @@ const captionGeneration = asyncHandler(async function (request, response) {
       throw new apiError(500, "Failed to generate captions");
     }
 
-    const srtContent = fs.readFileSync(captionPath, "utf-8");
+    const srtContent = fs.readFileSync(captionPath, "utf8");
     if (!srtContent) throw new apiError(500, "Something went wrong while reading the srt");
 
-
-    const parsedSrt = parseSync(srtContent);
-    if (!parsedSrt || !parsedSrt.length) throw new apiError(500, "Something went wrong while parsing srt");
-
-    const translatedCues = await Promise.all(
-      parsedSrt.map(async function (cue, index) {
-        const translatedText = await translateText(cue.data.text, "en", "hi");
-        return { ...cue, data: { ...cue.data, text: translatedText } };
-      })
-    );
-
-    if (!translatedCues.length) throw new apiError(500, "No cues were translated");
-
-    const translatedSrt = stringifySync(translatedCues, { format: "SRT" });
-
-    const vttPath = path.join(process.cwd(), "Public", "Temp", "Subtitles", `${path.basename(captionPath, path.extname(captionPath))}.vtt`);
-    fs.writeFileSync(vttPath, translatedSrt);
+    // video.captions = srtContent;
+    // const captionSaved = await video.save({
+    //   validateBeforeSave: false
+    // });
+    // if (!captionSaved) throw new apiError(500, "Unable to save captions");
 
     response.status(200).json(
-      new apiResponse(200, { translatedSrt }, "TranslatedCaptions generated successfully")
+      new apiResponse(200, { srtContent }, "TranslatedCaptions generated successfully")
     );
+    // const parsedSrt = parseSync(srtContent);
+    // if (!parsedSrt || !parsedSrt.length) throw new apiError(500, "Something went wrong while parsing srt");
+
+    // const translatedCues = await Promise.all(
+    //   parsedSrt.map(async function (cue) {
+    //     const translatedText = await translate(cue.data.text, "english", "hindi");
+    //     return { ...cue, data: { ...cue.data, text: translatedText } };
+    //   })
+    // );
+
+    // if (!translatedCues.length) throw new apiError(500, "No cues were translated");
+
+    // const translatedSrt = stringifySync(translatedCues, { format: "SRT" });
+
+    // const vttPath = path.join(process.cwd(), "Public", "Temp", "Subtitles", `${path.basename(captionPath, path.extname(captionPath))}.vtt`);
+    // fs.writeFileSync(vttPath, translatedSrt);
 
   } finally {
     safeUnlink(captionPath);
     safeUnlink(downloadedPath);
     safeUnlink(audioPath);
+    safeUnlink(downloadedPath)
   }
 });
-
 
 export { uploadVideo, deleteVideo, captionGeneration };

@@ -1,5 +1,4 @@
 import fs from "fs";
-import { parse, stringify } from "subtitle";
 
 const safeUnlink = function (filePath) {
   try {

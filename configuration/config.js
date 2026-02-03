@@ -10,7 +10,9 @@ const enVariables = [
   "REFRESHTOKENEXPIRY",
   "CLOUDINARYSECRET",
   "CLOUDINARYAPIKEY",
-  "CLOUDINARYCLOUDNAME"
+  "CLOUDINARYCLOUDNAME",
+  "HFTOKEN",
+  "GEMINIAPIKEY"
 ];
 
 enVariables.forEach(function (enVariable) {
@@ -29,6 +31,8 @@ const config = {
   cloudinarySecret: process.env.CLOUDINARYSECRET,
   cloudinaryApiKey: process.env.CLOUDINARYAPIKEY,
   cloudinaryCloudName: process.env.CLOUDINARYCLOUDNAME,
+  hfToken: process.env.HFTOKEN,
+  geminiKey: process.env.GEMINIAPIKEY
 };
 
 export default config;

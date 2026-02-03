@@ -1,7 +1,6 @@
 import multer from "multer";
 import path from "path";
 import { apiError } from "../Utilities/apiError.utility.js";
-import { getVideoDuration } from "../Utilities/video.utility.js"
 // Modules
 
 const Storage = multer.diskStorage({

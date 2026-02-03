@@ -6,6 +6,10 @@ import userRouter from "./Sources/Routes/user.routes.js";
 import adminRouter from "./Sources/Routes/admin.routes.js";
 import videoRouter from "./Sources/Routes/video.routes.js";
 import { connect } from "./Sources/Database/db.connect.js";
+import jobRouter from "./Sources/Routes/jobs.routes.js";
+import "./Sources/worker/job.worker.js";
+
+
 // Modules
 
 const app = express();
@@ -19,7 +23,9 @@ app.set("trust proxy", 1);
 
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/video/", videoRouter);
+app.use("/api/v1/video", videoRouter);
+app.use("/api/v1/jobs", jobRouter);
+
 // User routes\
 
 app.get("/", function (request, respond) {
@@ -27,12 +33,14 @@ app.get("/", function (request, respond) {
 });
 // ROOT!
 
-app.get("/ip-test", (request, response) => {
+
+//Test
+
+app.get("/test-tts", (request, response) => {
   response.json({ ip: request.ip });
 });
 // Routes
 
-// This MUST have 4 arguments (err, req, res, next)
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";

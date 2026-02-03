@@ -1,6 +1,9 @@
 import config from "../../Configuration/config.js";
 import { v2 as cloudinary } from "cloudinary";
 import fileSystem from "fs";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
 // Modules
 
 cloudinary.config({
@@ -10,7 +13,7 @@ cloudinary.config({
 });
 // Config
 
-const uploadOnCloudinary = async function(serverFilePath){
+const uploadOnCloudinary = async function (serverFilePath) {
   try {
     if (!serverFilePath) return null;
     const response = await cloudinary.uploader.upload(serverFilePath, {
@@ -27,7 +30,7 @@ const uploadOnCloudinary = async function(serverFilePath){
 };
 // Uploading
 
-const deleteFromCloudinary = async function (publicId, resourceType = "video"){
+const deleteFromCloudinary = async function (publicId, resourceType = "video") {
   try {
     const result = await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType,
@@ -43,4 +46,5 @@ const deleteFromCloudinary = async function (publicId, resourceType = "video"){
   }
 };
 //Deleting
+
 export { uploadOnCloudinary, deleteFromCloudinary };
