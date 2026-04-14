@@ -1,7 +1,6 @@
 import config from "../../Configuration/config.js";
 import { v2 as cloudinary } from "cloudinary";
 import fileSystem from "fs";
-import fs from "fs";
 import path from "path";
 import axios from "axios";
 // Modules
@@ -19,11 +18,12 @@ const uploadOnCloudinary = async function (serverFilePath) {
     const response = await cloudinary.uploader.upload(serverFilePath, {
       resource_type: "auto",
     });
-    fileSystem.unlinkSync(serverFilePath);
+    // fileSystem.unlinkSync(serverFilePath);
     return response;
   } catch (error) {
     if (fileSystem.existsSync(serverFilePath))
       fileSystem.unlinkSync(serverFilePath);
+    console.log("Upload failed on cloudinary by reason :", error);
     console.error("Cloudinary upload failed:", error.message);
     return error;
   }

@@ -12,7 +12,7 @@ import {
 } from "../Utilities/cloudinary.utility.js";
 import { safeUnlink } from "../Utilities/helper.utility.js";
 import { Video } from "../Models/video.model.js";
-import { getVideoDuration } from "../Services/duration.service.js";
+import { getDuration } from "../Services/duration.service.js";
 
 const uploadVideo = asyncHandler(async function (request, response) {
   const file = request.file;
@@ -26,7 +26,7 @@ const uploadVideo = asyncHandler(async function (request, response) {
     throw new apiError(400, "Only video files are allowed");
   }
 
-  const duration = await getVideoDuration(file.path);
+  const duration = await getDuration(file.path);
 
   if (duration > 10) {
     fs.unlinkSync(file.path);

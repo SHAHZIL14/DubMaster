@@ -4,19 +4,32 @@ import config from "../../Configuration/config.js"
 const translate = async function (text, inputLanguage, targetLanguage) {
   if (!text || !inputLanguage || !targetLanguage) return;
   const ai = new GoogleGenAI({ apiKey: config.geminiKey });
-  const prompt = `
-  Translate the following ${inputLanguage} text to casual, day-to-day ${targetLanguage} .
-  While converting make sure to translate the text as it is to be used further 
-  for dubbing of movies/series in ${targetLanguage} .
-  
-  STRICT RULES:
-  1. Output ONLY the translated text.
-  2. Do NOT provide explanations, options, or notes.
-  3. Do NOT use quotes or bold text.
-  4. Use common day to day life ${targetLanguage} as we get in dubbing with ${inputLanguage} loanwords where natural.
+  const prompt = `ROLE: Professional Movie Dubbing Translator & Script Adapter.
+TASK:
+Translate the following ${inputLanguage} text into natural, conversational ${targetLanguage} 
+with the same meaning and intent. The translation MUST be semantic, not phonetic.
 
-  Original Text: ${text}
-`;
+CRITICAL TRANSLATION RULES:
+1. MEANING FIRST: Always translate the meaning. NEVER transliterate or copy pronunciation from ${inputLanguage}.
+   Example: "Hey there" → a natural greeting in ${targetLanguage}, NOT phonetic text.
+2. NAMES: Keep proper names unchanged (e.g., William, New York).
+3. NATURAL SPEECH: The result should sound like a real person speaking in a movie dub.
+4. NO WORD-BY-WORD TRANSLATION: Rewrite if needed to sound natural.
+
+TTS OPTIMIZATION:
+5. NUMBERS: Convert digits into spoken words in ${targetLanguage}.
+6. ABBREVIATIONS: Expand into spoken form.
+7. PUNCTUATION: Use commas and periods only for natural pauses (no extra spacing).
+8. SYMBOLS: Replace symbols with words.
+
+STRICT OUTPUT:
+- Output ONLY the final translated sentence.
+- No explanations.
+- No phonetic spellings.
+- No extra spaces between words.
+
+Original Text:
+${text}`;
 
   try {
     const response = await ai.models.generateContent({

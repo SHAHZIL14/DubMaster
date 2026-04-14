@@ -57,7 +57,7 @@ const videoSchema = new mongoose.Schema(
       type: String,
     },
 
-    audioUrl: {
+    translatedVideoUrl: {
       type: String,
     },
 

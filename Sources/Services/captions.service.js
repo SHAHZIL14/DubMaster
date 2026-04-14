@@ -14,8 +14,10 @@ const generateCaptions = (audioPath) => {
     const baseName = path.basename(audioPath, path.extname(audioPath));
     const localPath = path.join(tempDir, `${baseName}.srt`);
 
-    const cmd = `python -m whisper "${audioPath}" --model small --output_format srt --output_dir "${tempDir}"`;
-
+    // We add an initial prompt to "teach" Whisper to use punctuation.
+    // We also set temperature to 0 for more consistent, literal output.
+    const initialPrompt = "Hello, this is a transcript. It includes commas, periods, and proper casing.";
+    const cmd = `python -m whisper "${audioPath}" --model medium --output_format srt --output_dir "${tempDir}" --temperature 0 --condition_on_previous_text True`;
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
         console.error(stderr);
