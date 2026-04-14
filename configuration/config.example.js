@@ -24,15 +24,15 @@ enVariables.forEach(function (enVariable) {
 const config = {
   port: parseInt(process.env.PORT, 10),
   uri: process.env.URI,
-  accessTokenSecret: process.env.ACCESSTOKENSECRET,
-  accessTokenExpiry: process.env.ACCESSTOKENEXPIRY,
-  refreshTokenSecret: process.env.REFRESHTOKENSECRET,
-  refreshTokenExpiry: process.env.REFRESHTOKENEXPIRY,
-  cloudinarySecret: process.env.CLOUDINARYSECRET,
-  cloudinaryApiKey: process.env.CLOUDINARYAPIKEY,
-  cloudinaryCloudName: process.env.CLOUDINARYCLOUDNAME,
-  hfToken: process.env.HFTOKEN,
-  geminiKey: process.env.GEMINIAPIKEY
+  accessTokenSecret: "",
+  accessTokenExpiry: "",
+  refreshTokenSecret: "",
+  refreshTokenExpiry: "",
+  cloudinarySecret: "",
+  cloudinaryApiKey: "",
+  cloudinaryCloudName: "",
+  hfToken: "",
+  geminiKey: ""
 };
 
 export default config;
