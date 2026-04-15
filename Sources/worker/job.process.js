@@ -180,7 +180,8 @@ const processJob = async function (jobId) {
     safeUnlink(finalAudioPath);
     safeUnlink(outputPath);
     safeUnlink(captionPath);
-    safeUnlink(vttPath)
+    safeUnlink(vttPath);
+    safeUnlink(mergePath);
     await deleteFolder(silenceDir);
     await deleteFolder(mergeDir);
     await deleteFolder(ttsDir);

@@ -38,7 +38,8 @@ const uploadVideo = asyncHandler(async function (request, response) {
   if (!videoOnCloud?.url) {
     throw new apiError(500, "Cloudinary upload failed");
   }
-
+  safeUnlink(file.path);
+  
   const fileSize = Number((videoOnCloud.bytes / (1024 * 1024)).toFixed(2));
   const expiryDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
 
