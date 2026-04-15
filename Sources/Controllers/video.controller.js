@@ -13,8 +13,25 @@ import {
 import { safeUnlink } from "../Utilities/helper.utility.js";
 import { Video } from "../Models/video.model.js";
 import { getDuration } from "../Services/duration.service.js";
+import { readQueue } from "../../Data/Queue/queue.services.js";
 
 const uploadVideo = asyncHandler(async function (request, response) {
+  const queue = await readQueue();
+
+  // Safety check
+  if (!Array.isArray(queue?.waiting)) {
+    return response.status(500).json({
+      message: "Queue corrupted"
+    });
+  }
+
+  // LIMIT CHECK (with return ✅)
+  if (queue.waiting.length >= 2) {
+    return response.status(429).json(
+      new apiResponse(429, null, "Queue is full")
+    );
+  }
+
   const file = request.file;
 
   if (!file) {
@@ -30,7 +47,7 @@ const uploadVideo = asyncHandler(async function (request, response) {
 
   if (duration > 10) {
     fs.unlinkSync(file.path);
-    throw new apiError(400, "Video length exceeds the limit of 10 seconds.");
+    throw new apiError(400, "Video length exceeds 10 seconds.");
   }
 
   const videoOnCloud = await uploadOnCloudinary(file.path);
@@ -38,10 +55,8 @@ const uploadVideo = asyncHandler(async function (request, response) {
   if (!videoOnCloud?.url) {
     throw new apiError(500, "Cloudinary upload failed");
   }
+
   safeUnlink(file.path);
-  
-  const fileSize = Number((videoOnCloud.bytes / (1024 * 1024)).toFixed(2));
-  const expiryDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
 
   const video = await Video.create({
     userId: request.user._id,
@@ -49,20 +64,24 @@ const uploadVideo = asyncHandler(async function (request, response) {
     originalVideoUrl: videoOnCloud.url,
     originalFileName: videoOnCloud.original_filename,
     duration,
-    size: fileSize,
+    size: Number((videoOnCloud.bytes / (1024 * 1024)).toFixed(2)),
     status: "uploaded",
-    expiresAt: expiryDate,
+    expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
   });
 
   const job = await createJob(video._id, video.originalVideoUrl);
-  if (!job) throw new apiError(500, "Unable to create new job");
 
+  if (!job) {
+    return response.status(429).json(
+      new apiResponse(429, null, "Queue is full")
+    );
+  }
 
-  response.status(201).json(
+  return response.status(201).json(
     new apiResponse(
       201,
       { id: video._id, url: video.originalVideoUrl },
-      `Video uploaded successfully and job created with ID:${job}`
+      `Video uploaded successfully. Job ID: ${job}`
     )
   );
 });
