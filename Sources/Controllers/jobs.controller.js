@@ -29,8 +29,9 @@ const createJob = async (docId, url) => {
       caption: "pending",
       translate: "pending",
       tts: "pending",
-      synchronize: "pending",
-      merge: "pending",
+      synchronized: "pending",
+      audioOutput: "pending",
+      videoOutput: "pending",
       upload: "pending"
     }
   };

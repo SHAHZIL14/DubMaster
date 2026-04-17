@@ -1,22 +1,21 @@
 import fs from "fs";
 import path from "path";
+import fileSystem from "fs/promises";
 import { downloadFromCloudinary, downloadFromHuggingFace } from "../Services/download.service.js"
 import { extractAudio } from "../Services/audio.service.js"
 import { generateCaptions } from "../Services/captions.service.js"
 import { translate } from "../Services/translate.service.js"
 import { generateTTS } from "../Services/tts.service.js"
-import { synchronize } from "../Services/synchronizer.services.js";
-import { mergeAudio } from "../Services/merge.service.js";
 import { Video } from "../Models/video.model.js";
 import { parseSync, stringifySync } from "subtitle";
 import { safeUnlink } from "../Utilities/helper.utility.js";
 import { changeState, readJob } from "./job.services.js";
 import { dequeue, markComplete, markFailed, markProcessing, toggleProcessing, unMarkProcessing } from "../../Data/Queue/queue.services.js";
 import { uploadOnCloudinary } from "../Utilities/cloudinary.utility.js";
-import { generateWithSplit } from "../Services/split.service.js";
-import { mergeAudioVideo } from "../Services/audioVideoMerge.js";
+import { synchronizeSegment } from "../Services/syncSegment.service.js";
+import { buildFinalAudio } from "../Services/audioOutput.service.js";
+import { mergeAudioWithVideo } from "../Services/audioVideoMerge.service.js";
 
-import fileSystem from "fs/promises";
 
 async function deleteFolder(dirPath) {
   try {
@@ -36,6 +35,7 @@ const processJob = async function (jobId) {
   const video = await Video.findById(job.docId);
   if (!video) throw new Error("Unable to find the video in DB");
   if (!job) throw new Error("Job is unavailable");
+  // Paths -->
   let downloadPath;
   let audioPath;
   let captionPath;
@@ -43,13 +43,20 @@ const processJob = async function (jobId) {
   let ttsPaths;
   let translatedCues;
   let srtContent
-  let finalAudioPath;
-  let mergePath;
-  let outputPath = path.join(process.cwd(), "Public", "Temp", "Output", `${jobId}.mp4`);;
-  let silenceDir = path.join(process.cwd(), "Public", "Temp", "Silence");
-  let mergeDir = path.join(process.cwd(), "Public", "Temp", "Merge", jobId);
-  let ttsDir = path.join(process.cwd(), "Public", "Temp", "TTS", jobId);
+  let audioOutput;
+  let videoOutput;
+  // Paths -->
+  // Directories
+  const ttsDir = path.join(process.cwd(), "Public", "Temp", "TTS", jobId);
+  const sycnchronizedDir = path.join(process.cwd(), "Public", "Temp", "Synchronized", jobId);
+  const audioDir = path.join(process.cwd(), "Public", "Temp", "Merge", jobId);
+  const videoDir = path.join(process.cwd(), "Public", "Temp", "Output", jobId);
+  // Directories
+  // Global Variables -->
+  let syncedAudioMeta = [];
+  // Global Variables -->
   try {
+    // -----------------Downloading the video-------------------//
     if (job.steps.download == "pending") {
       console.log("Downloading Started");
       downloadPath = await downloadFromCloudinary(job.url);
@@ -59,6 +66,8 @@ const processJob = async function (jobId) {
         job = readJob(jobId);
       }
     }
+    // -----------------Downloading the video-------------------//
+    // -----------------Extracting the audio--------------------//
 
     if (job.steps.audio == "pending") {
       console.log("Extracting Audio");
@@ -72,7 +81,8 @@ const processJob = async function (jobId) {
         job = readJob(jobId);
       }
     }
-
+    // -----------------Extracting the audio--------------------//
+    // -----------------Extracting the captions-----------------//
     if (job.steps.caption == "pending") {
       console.log("Generating caption");
       captionPath = await generateCaptions(job.steps.audio);
@@ -90,12 +100,11 @@ const processJob = async function (jobId) {
         job = readJob(jobId);
       }
     }
+    // -----------------Extracting the captions-----------------//
 
     const parsedSrt = parseSync(srtContent);
     if (!parsedSrt || !parsedSrt.length) throw new Error("Something went wrong while parsing srt");
-    console.log("srtContent = ", srtContent);
-    console.log("parsedSrt = ", parsedSrt);
-
+    // -----------------Translation the SRT-----------------//
     if (job.steps.translate == "pending") {
       console.log("Translating Started");
       translatedCues = await Promise.all(
@@ -119,43 +128,70 @@ const processJob = async function (jobId) {
         job = readJob(jobId);
       }
     }
-
+    // -----------------Translation the SRT-----------------//
+    // -----------Generating speech from translation--------//
     if (job.steps.tts == "pending") {
       console.log("started tts");
       ttsPaths = await Promise.all(
         translatedCues.map(async function (cue, index) {
           const text = cue.data.text;
-          return await generateWithSplit(text, jobId, index);
+          return await generateTTS(text, jobId, index);
         }));
       if (ttsPaths.length == 0) throw new Error("Unable to generate tts");
-      else {
-        ttsPaths = ttsPaths.flat();
-        mergePath = await mergeAudio(ttsPaths, jobId);
-        if (!mergePath) throw new Error("Unable to merge the generated audio files");
-        changeState(jobId, "steps", "tts", mergePath);
-        job = readJob(jobId);
-      }
+      changeState(jobId, "steps", "tts", "Done");
+      job = readJob(jobId);
     }
-
-    if (job.steps.synchronize == "pending") {
+    // -----------Generating speech from translation--------//
+    // -----------Synchronizing the speech------------------//
+    if (job.steps.synchronized == "pending") {
       console.log("synchronization started");
-      const syncAudioPath = path.join(process.cwd(), "Public", "Temp", "Synchronized", `${jobId}.wav`);
-      finalAudioPath = await synchronize(mergePath, downloadPath, syncAudioPath);
-      if (!finalAudioPath) throw new Error("Unable to synchronize the audio file.");
-      changeState(jobId, "steps", "synchronize", finalAudioPath);
+      const syncedPaths = await Promise.all(
+        translatedCues.map(async (cue, index) => {
+          let audioPath = ttsPaths[index];
+          let targetDuration = cue.data.end - cue.data.start;
+          let outputPath = await synchronizeSegment({
+            audioPath,
+            targetDuration,
+            jobId,
+            index
+          });
+          syncedAudioMeta.push({
+            path: outputPath,
+            start: cue.data.start,
+            duration: targetDuration
+          });
+          return outputPath;
+        })
+      );
+      if (syncedPaths.length == 0) throw new Error("unable to synchronize the audio files.");
+      changeState(jobId, "steps", "synchronized", "Done");
       job = readJob(jobId);
     }
+    // -----------Synchronizing the speech------------------//
+    // -----------Merging audio clips ------------------//
+    if (job.steps.audioOutput == "pending") {
+      console.log("Merging all audio clips into one.");
+      audioOutput = await buildFinalAudio(syncedAudioMeta, jobId);
+      if (!audioOutput) throw new Error("Unable to merge the audio files.");
+      changeState(jobId, "steps", "audioOutput", audioOutput);
+      job = readJob(jobId);
+    }
+    // -----------Merging audio clips------------------//
 
-    if (job.steps.merge == "pending") {
-      console.log("Merging synched audio with video");
-      outputPath = await mergeAudioVideo(downloadPath, finalAudioPath, outputPath);
-      if (!outputPath) throw new Error("Unable to merge the audio file with video.");
-      changeState(jobId, "steps", "merge", outputPath);
+    // -----------Merging audio with video------------------//
+    if (job.steps.videoOutput == "pending") {
+      console.log("Merging synched audio with video.");
+      videoOutput = await mergeAudioWithVideo(downloadPath, audioOutput, jobId);
+      if (!videoOutput) throw new Error("Unable to merge the audio file with video.");
+      changeState(jobId, "steps", "videoOutput", videoOutput);
       job = readJob(jobId);
     }
+    // -----------Merging audio with video------------------//
+
+    // -----------Uploading video on cloud------------------//
 
     if (job.steps.upload == "pending") {
-      const translatedVideoOnCloud = await uploadOnCloudinary(job.steps.merge);
+      const translatedVideoOnCloud = await uploadOnCloudinary(job.steps.videoOutput);
       if (translatedVideoOnCloud?.url) {
         video.translatedVideoUrl = translatedVideoOnCloud.url;
         const savedTranslatedVideoUrl = await video.save({
@@ -165,10 +201,9 @@ const processJob = async function (jobId) {
         changeState(jobId, "steps", "upload", translatedVideoOnCloud.url);
       }
     }
-
+    // -----------Uploading video on cloud------------------//
     changeState(jobId, "status", "completed");
     await markComplete(jobId);
-    console.log("FINAL OUTPUT PATH:", outputPath);
   } catch (error) {
     await markFailed(jobId);
     console.log(error.message);
@@ -177,14 +212,14 @@ const processJob = async function (jobId) {
   finally {
     safeUnlink(downloadPath);
     safeUnlink(audioPath);
-    safeUnlink(finalAudioPath);
-    safeUnlink(outputPath);
+    safeUnlink(audioOutput);
+    safeUnlink(videoOutput);
     safeUnlink(captionPath);
     safeUnlink(vttPath);
-    safeUnlink(mergePath);
-    await deleteFolder(silenceDir);
-    await deleteFolder(mergeDir);
     await deleteFolder(ttsDir);
+    await deleteFolder(sycnchronizedDir);
+    await deleteFolder(audioDir);
+    await deleteFolder(videoDir);
     await unMarkProcessing();
   }
 }
